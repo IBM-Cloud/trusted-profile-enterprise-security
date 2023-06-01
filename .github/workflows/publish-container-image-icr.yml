@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ICR_NAMESPACE: solution-tutorials
-      ICR_REPOSITORY: tutorial-cloud-e2e-security
+      ICR_REPOSITORY: tutorial-trusted-profile-enterprise-security
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
