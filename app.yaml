@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
       - name: tptest-container
-        image: icr.io/solution-tutorials/tutorial-trusted-profile-enterprise-security:v1.0.1
+        image: icr.io/solution-tutorials/tutorial-trusted-profile-enterprise-security:v1.0.2
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
