@@ -33,7 +33,7 @@ dictConfig({
     }
 })
 
-codeversion='2.3.5'
+codeversion='2.3.8'
 
 # load .env if present
 load_dotenv()
@@ -87,12 +87,26 @@ def handleAPIAccess(url, headers, payload, next_field, result_field):
 
 
 # see https://cloud.ibm.com/apidocs/resource-controller/resource-controller#list-resource-instances
+# extract and return only the CRNs
+def getResourceInstancesCRN(iam_token):
+    url = f'https://resource-controller.cloud.ibm.com/v2/resource_instances'
+    headers = { "Authorization" : "Bearer "+iam_token }
+    payload = { "limit": 100}
+    data=handleAPIAccess(url, headers, payload, "next_url", "resources")
+    crns=[]
+    for resource in data['resources']:
+        crns.append({'crn':resource['crn']})
+    data['resources']=crns
+    return data
+
+# see https://cloud.ibm.com/apidocs/resource-controller/resource-controller#list-resource-instances
 def getResourceInstances(iam_token):
     url = f'https://resource-controller.cloud.ibm.com/v2/resource_instances'
     headers = { "Authorization" : "Bearer "+iam_token }
     payload = { "limit": 100}
-    return handleAPIAccess(url, headers, payload, "next_url", "resources")
-
+    data=handleAPIAccess(url, headers, payload, "next_url", "resources")
+    #return all data
+    return data
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -103,10 +117,11 @@ def index():
     app.logger.info("index with codeversion requested")
     return jsonify(result="ok", codeversion=codeversion)
 
+# return full resource details
 @app.route('/api/listresources', methods=['GET'])
 def listresources():
     app.logger.info("API listresources requested")
-    trustedprofile_name=request.args.get('tpname', 'TPTest')
+    trustedprofile_name=request.args.get('tpname', '')
     app.logger.info("trustedprofile_name is %s", trustedprofile_name)
     crtoken=readSAToken()
     if crtoken is None:
@@ -119,6 +134,24 @@ def listresources():
         return jsonify(message="resource instances", crtoken=crtoken, tokens=authTokens, resource_instances=getResourceInstances(iam_token))
     else:
         return jsonify(message=authTokens)
+
+@app.route('/api/listresources_crn', methods=['GET'])
+def listresourcesCRN():
+    app.logger.info("API listresources requested")
+    trustedprofile_name=request.args.get('tpname', '')
+    app.logger.info("trustedprofile_name is %s", trustedprofile_name)
+    crtoken=readSAToken()
+    if crtoken is None:
+        return jsonify(message="error reading service account token")
+        exit
+    authTokens=retrieveIAMTokenforCR(trustedprofile_name, crtoken)
+    if 'access_token' in authTokens:
+        app.logger.info("IAM token: %s",jwt.decode(authTokens["access_token"], options={"verify_signature": False}))
+        iam_token=authTokens["access_token"]
+        return jsonify(message="resource instances", crtoken=crtoken, tokens=authTokens, resource_instances=getResourceInstancesCRN(iam_token))
+    else:
+        return jsonify(message=authTokens)
+
 
 # Start the actual app
 # Get the PORT from environment
